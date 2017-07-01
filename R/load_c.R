@@ -1,0 +1,53 @@
+
+#' @useDynLib grb GRB_loadenv
+#' @useDynLib grb GRB_freeenv
+#' @useDynLib grb GRB_newmodel
+#' @useDynLib grb GRB_copymodel
+#' @useDynLib grb GRB_addconstr
+#' @useDynLib grb GRB_addgenconstrMax
+#' @useDynLib grb GRB_addgenconstrMin
+#' @useDynLib grb GRB_addgenconstrAbs
+#' @useDynLib grb GRB_addgenconstrAnd
+#' @useDynLib grb GRB_addgenconstrOr
+#' @useDynLib grb GRB_addgenconstrIndicator
+#' @useDynLib grb GRB_addrangeconstr
+#' @useDynLib grb GRB_addsos
+#' @useDynLib grb GRB_addvar
+#' @useDynLib grb GRB_addvars
+#' @useDynLib grb GRB_chgcoeffs
+#' @useDynLib grb GRB_delconstrs
+#' @useDynLib grb GRB_delgenconstrs
+#' @useDynLib grb GRB_delq
+#' @useDynLib grb GRB_delqconstrs
+#' @useDynLib grb GRB_delsos
+#' @useDynLib grb GRB_delvars
+#' @useDynLib grb GRB_setpwlobj
+#' @useDynLib grb GRB_updatemodel
+#' @useDynLib grb GRB_freemodel
+#' @useDynLib grb GRB_optimize
+#' @useDynLib grb GRB_optimizeasync
+#' @useDynLib grb GRB_computeIIS
+#' @useDynLib grb GRB_fixedmodel
+#' @useDynLib grb GRB_resetmodel
+#' @useDynLib grb GRB_sync
+#' @useDynLib grb GRB_readmodel
+#' @useDynLib grb GRB_read
+#' @useDynLib grb GRB_write
+#' @useDynLib grb GRB_getattrinfo
+#' @useDynLib grb GRB_getintattr
+#' @useDynLib grb GRB_setintattr
+#' @useDynLib grb GRB_getintattrelement
+#' @useDynLib grb GRB_setintattrelement
+#' @useDynLib grb GRB_getintattrarray
+#' @useDynLib grb GRB_setintattrarray
+#' @useDynLib grb GRB_getintattrlist
+#' @useDynLib grb GRB_setintattrlist
+#'
+#' @useDynLib grb GRB_getdblattr
+#' @useDynLib grb GRB_getdblattrarray
+#' @useDynLib grb GRB_setdblattrlist
+#'
+#' @useDynLib grb GRB_getstrattr
+#' @useDynLib grb GRB_getstrattrarray
+#'
+NULL

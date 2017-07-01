@@ -1,0 +1,10 @@
+*.Rproj*
+*.Rbuildignore
+.RData
+.Rhistory
+gurobi.log
+.Rproj.user
+*.o
+*.so
+.DS_Store
+
