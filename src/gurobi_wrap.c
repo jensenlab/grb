@@ -39,8 +39,15 @@
   setAttrib(L, R_NamesSymbol, _names_L);                       \
   UNPROTECT(2)
 
-#define NULLABLE(X, CONV) isNull(x) ? NULL : (CONV)
+#define NULLABLE(X, CONV) isNull(X) ? NULL : (CONV)
 
+char** copyCharPtrs(SEXP strs, char **ptr) {
+  int n = length(strs);
+  for (int i = 0; i < n; i++) {
+    ptr[i] = CHAR(STRING_ELT(strs, i));
+  }
+  return(ptr);
+}
 
 /* =======Environment Creation and Destruction =======*/
 
@@ -83,23 +90,74 @@ static void _GRBmodel_finalizer(SEXP ext_model) {
 }
 
 // GRBloadmodel
+SEXP GRB_loadmodel(SEXP ext_env,
+                   SEXP modelname,
+                   SEXP numvars,
+                   SEXP numconstrs,
+                   SEXP objsense,
+                   SEXP objcon,
+                   SEXP obj,
+                   SEXP sense,
+                   SEXP rhs,
+                   SEXP vbeg,
+                   SEXP vlen,
+                   SEXP vind,
+                   SEXP vval,
+                   SEXP lb,
+                   SEXP ub,
+                   SEXP vtype,
+                   SEXP varnames,
+                   SEXP constrnames) {
+  GRBmodel *model = NULL;
+  char *varnames_ptrs[length(varnames)];
+  char *constrnames_ptrs[length(constrnames)];
+  int error = GRBloadmodel(
+    RECAST_ENV(ext_env),
+    &model,
+    CHAR(asChar(modelname)),
+    INTEGER(numvars)[0],
+    INTEGER(numconstrs)[0],
+    INTEGER(objsense)[0],
+    REAL(objcon)[0],
+    isNull(obj) ? NULL : REAL(obj),
+    CHAR(asChar(sense)),
+    isNull(rhs) ? NULL : REAL(rhs),
+    INTEGER(vbeg),
+    INTEGER(vlen),
+    INTEGER(vind),
+    REAL(vval),
+    isNull(lb) ? NULL : REAL(lb),
+    isNull(ub) ? NULL : REAL(ub),
+    isNull(vtype) ? NULL : CHAR(asChar(vtype)),
+    isNull(varnames) ? NULL : copyCharPtrs(varnames, varnames_ptrs),
+    isNull(constrnames) ? NULL : copyCharPtrs(constrnames, constrnames_ptrs)
+  );
+  if (error) Rprintf("Error loading GRBmodel: %i\n", error);
+
+  RETURN_XPTR(model, _GRBmodel_finalizer);
+}
 
 // GRBnewmodel
-// TODO: expand to allow defaults
-SEXP GRB_newmodel(SEXP ext_env,  SEXP modelname) {
-  GRBenv *env = RECAST_ENV(ext_env);
+SEXP GRB_newmodel(SEXP ext_env,
+                  SEXP modelname,
+                  SEXP numvars,
+                  SEXP obj,
+                  SEXP lb,
+                  SEXP ub,
+                  SEXP vtype,
+                  SEXP varnames) {
   GRBmodel *model = NULL;
-  const char *name = CHAR(asChar(modelname));
+  char *varnames_ptrs[length(varnames)];
   int error = GRBnewmodel(
-    env,
+    RECAST_ENV(ext_env),
     &model,
-    name,
-    0,
-    NULL,
-    NULL,
-    NULL,
-    NULL,
-    NULL
+    CHAR(asChar(modelname)),
+    INTEGER(numvars)[0],
+    isNull(obj) ? NULL : REAL(obj),
+    isNull(lb) ? NULL : REAL(lb),
+    isNull(ub) ? NULL : REAL(ub),
+    isNull(vtype) ? NULL : CHAR(asChar(vtype)),
+    isNull(varnames) ? NULL : copyCharPtrs(varnames, varnames_ptrs)
   );
   if (error) Rprintf("Error loading GRBmodel: %i\n", error);
 
@@ -135,6 +193,30 @@ SEXP GRB_addconstr(SEXP ext_model,  // GRBmodel*
 }
 
 // GRBaddconstrs
+SEXP GRB_addconstrs(SEXP ext_model,
+                    SEXP numconstrs,
+                    SEXP numnz,
+                    SEXP cbeg,
+                    SEXP cind,
+                    SEXP cval,
+                    SEXP sense,
+                    SEXP rhs,
+                    SEXP constrnames) {
+  char *constrnames_ptrs[length(constrnames)];
+  int error = GRBaddconstrs(
+    RECAST_MODEL(ext_model),
+    INTEGER(numconstrs)[0],
+    INTEGER(numnz)[0],
+    INTEGER(cbeg),
+    INTEGER(cind),
+    REAL(cval),
+    CHAR(asChar(sense)),
+    isNull(rhs) ? NULL : REAL(rhs),
+    isNull(constrnames) ? NULL : copyCharPtrs(constrnames, constrnames_ptrs)
+  );
+
+  RETURN_INT(error);
+}
 
 // GRBaddgenconstrMax
 SEXP GRB_addgenconstrMax(SEXP ext_model,
@@ -249,8 +331,50 @@ SEXP GRB_addgenconstrIndicator(SEXP ext_model,
 }
 
 // GRBaddqconstr
+SEXP GRB_addqconstr(SEXP ext_model,
+                    SEXP numlnz,
+                    SEXP lind,
+                    SEXP lval,
+                    SEXP numqnz,
+                    SEXP qrow,
+                    SEXP qcol,
+                    SEXP qval,
+                    SEXP sense,
+                    SEXP rhs,
+                    SEXP constrname) {
+  int error = GRBaddqconstr(
+    RECAST_MODEL(ext_model),
+    INTEGER(numlnz)[0],
+    INTEGER(lind),
+    REAL(lval),
+    INTEGER(numqnz)[0],
+    INTEGER(qrow),
+    INTEGER(qcol),
+    REAL(qval),
+    CHAR(asChar(sense))[0],
+    REAL(rhs)[0],
+    CHAR(asChar(constrname))
+  );
+
+  RETURN_INT(error);
+}
 
 // GRBaddqpterms
+SEXP GRB_addqpterms(SEXP ext_model,
+                    SEXP numqnz,
+                    SEXP qrow,
+                    SEXP qcol,
+                    SEXP qval) {
+  int error = GRBaddqpterms(
+    RECAST_MODEL(ext_model),
+    INTEGER(numqnz)[0],
+    INTEGER(qrow),
+    INTEGER(qcol),
+    REAL(qval)
+  );
+
+  RETURN_INT(error);
+}
 
 // GRBaddrangeconstr
 SEXP GRB_addrangeconstr(SEXP ext_model,
@@ -274,6 +398,30 @@ SEXP GRB_addrangeconstr(SEXP ext_model,
 }
 
 // GRBaddrangeconstrs
+SEXP GRB_addrangeconstrs(SEXP ext_model,
+                         SEXP numconstrs,
+                         SEXP numnz,
+                         SEXP cbeg,
+                         SEXP cind,
+                         SEXP cval,
+                         SEXP lower,
+                         SEXP upper,
+                         SEXP constrnames) {
+  char *constrnames_ptrs[length(constrnames)];
+  int error = GRBaddrangeconstrs(
+    RECAST_MODEL(ext_model),
+    INTEGER(numconstrs)[0],
+    INTEGER(numnz)[0],
+    INTEGER(cbeg),
+    INTEGER(cind),
+    REAL(cval),
+    REAL(lower),
+    REAL(upper),
+    isNull(constrnames) ? NULL : copyCharPtrs(constrnames, constrnames_ptrs)
+  );
+
+  RETURN_INT(error);
+}
 
 // GRBaddsos
 SEXP GRB_addsos(SEXP ext_model,
@@ -313,10 +461,10 @@ SEXP GRB_addvar(SEXP ext_model,   // GRBmodel*
     INTEGER(vind),
     REAL(vval),
     REAL(obj)[0],
-    REAL(lb)[0],
-    REAL(ub)[0],
+    isNull(lb) ? -GRB_INFINITY : REAL(lb)[0],
+    isNull(ub) ?  GRB_INFINITY : REAL(ub)[0],
     CHAR(asChar(vtype))[0],
-    CHAR(asChar(varname))
+    isNull(varname) ? NULL : CHAR(asChar(varname))
   );
 
   RETURN_INT(error);
@@ -334,6 +482,7 @@ SEXP GRB_addvars(SEXP ext_model,
                  SEXP lb,
                  SEXP vtype,
                  SEXP varnames) {
+  char *varnames_ptrs[length(varnames)];
   int error = GRBaddvars(
     RECAST_MODEL(ext_model),
     INTEGER(numvars)[0],
@@ -341,11 +490,11 @@ SEXP GRB_addvars(SEXP ext_model,
     INTEGER(vbeg),
     INTEGER(vind),
     REAL(vval),
-    REAL(obj),
-    REAL(lb),
-    REAL(ub),
-    CHAR(asChar(vtype))[0],
-    CHAR(asChar(varnames))
+    isNull(obj) ? NULL : REAL(obj),
+    isNull(lb) ? NULL : REAL(lb),
+    isNull(ub) ? NULL : REAL(ub),
+    isNull(vtype) ? NULL : CHAR(asChar(vtype)),
+    isNull(varnames) ? NULL : copyCharPtrs(varnames, varnames_ptrs)
   );
 
   RETURN_INT(error);
@@ -502,6 +651,29 @@ SEXP GRB_computeIIS(SEXP ext_model) {
 }
 
 // GRBfeasrelax
+SEXP GRB_feasrelax(SEXP ext_model,
+                   SEXP relaxobjtype,
+                   SEXP minrelax,
+                   SEXP lbpen,
+                   SEXP ubpen,
+                   SEXP rhspen) {
+  double feasobjP;
+  int error = GRBfeasrelax(
+    RECAST_MODEL(ext_model),
+    INTEGER(relaxobjtype)[0],
+    INTEGER(minrelax)[0],
+    isNull(lbpen) ? NULL : REAL(lbpen),
+    isNull(ubpen) ? NULL : REAL(ubpen),
+    isNull(rhspen) ? NULL : REAL(rhspen),
+    &feasobjP
+  );
+
+  if (INTEGER(minrelax)[0] == 1) {
+    RETURN_REAL(feasobjP);
+  } else {
+    RETURN_INT(error);
+  }
+}
 
 // GRBfixedmodel
 SEXP GRB_fixedmodel(SEXP ext_model) {
@@ -852,6 +1024,32 @@ SEXP GRB_getstrattrarray(SEXP ext_model,
 
 
 /* =======Parameter Management and Tuning =======*/
+
+// GRBtunemodel
+// GRBgettuneresult
+// GRBgetdblparam
+// GRBgetintparam
+// GRBgetstrparam
+// GRBsetdblparam
+
+// GRBsetintparam
+SEXP GRB_setintparam(SEXP ext_model,
+                     SEXP paramname,
+                     SEXP newvalue) {
+  int error = GRBsetintparam(
+    GRBgetenv(RECAST_MODEL(ext_model)),
+    CHAR(asChar(paramname)),
+    INTEGER(newvalue)[0]
+  );
+  RETURN_INT(error);
+}
+
+// GRBsetstrparam
+// GRBgetdblparaminfo
+// GRBgetintparaminfo
+// GRBgetstrparaminfo
+// GRBreadparams
+// GRBwriteparams
 
 /* =======Monitoring Progress =======*/
 

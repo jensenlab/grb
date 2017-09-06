@@ -10,6 +10,17 @@ expand <- function(x, n) {
   x
 }
 
+# just like as.XXX, but keeps NULL
+# inputs NULL
+nullable_assert_factory <- function(as_f) {
+  function (x) {
+    if (is.null(x)) NULL else as_f(x)
+  }
+}
+
+assert_integer <- nullable_assert_factory(as.integer)
+assert_numeric <- nullable_assert_factory(as.numeric)
+
 as_char <- function(x) {
   if (is.null(x)) {
     NULL
@@ -43,23 +54,30 @@ GRBenv <- setRefClass(
   )
 )
 
-GRBnewmodel <- function(env, name="", nvars=0,
-                         obj=NULL, lb=NULL, ub=NULL,
-                         vtype=NULL, vnames=NULL, auto_update = TRUE) {
-  exptr <<- .Call("GRB_newmodel", env$exptr, name)
-  auto_update <<- auto_update
-}
-
 #' @export GRBmodel
 GRBmodel <- setRefClass(
   "GRBmodel",
-  fields = list(exptr = "externalptr", auto_update = "logical"),
+  fields = list(exptr = "externalptr", envptr = "externalptr", auto_update = "logical"),
   methods = list(
-    initialize = GRBnewmodel,
-    newmodel = GRBnewmodel,
+    initialize = function(env=GRBenv$new(), name="", numvars=0,
+                          obj=NULL, lb=NULL, ub=NULL,
+                          vtype=NULL, vnames=NULL, auto_update = TRUE) {
+      exptr <<- .Call(
+        "GRB_newmodel",
+        env$exptr,
+        name,
+        as.integer(numvars),
+        obj,
+        lb,
+        ub,
+        vtype,
+        vnames)
+      envptr <<- env$exptr
+      auto_update <<- auto_update
+    },
 
-    update = function() .Call("GRB_updatemodel", exptr),
-    optimize = function() .Call("GRB_optimize", exptr),
+    update = function() invisible(.Call("GRB_updatemodel", exptr)),
+    optimize = function() invisible(.Call("GRB_optimize", exptr)),
 
     addvar = function(name="", vtype='C',
                       obj=NULL, lb=NULL, ub=NULL,
@@ -70,15 +88,15 @@ GRBmodel <- setRefClass(
         length(vind),
         as.integer(vind),
         as.numeric(vval),
-        as.numeric(obj),
-        as.numeric(lb),
-        as.numeric(ub),
+        assert_numeric(obj),
+        assert_numeric(lb),
+        assert_numeric(ub),
         vtype,
         name
       )
 
       if (auto_update) update()
-      return(error)
+      invisible(error)
     },
 
     addvars = function(name, vtype='C',
@@ -98,7 +116,9 @@ GRBmodel <- setRefClass(
           name[i], vtype[i], obj[i], lb[i], ub[i], vind[i], vval[i]
         )
       }
-      return(errors)
+
+      if (auto_update) update()
+      invisible(errors)
     },
 
     addconstr = function(values, sense, rhs, name="", ind=NULL) {
@@ -115,12 +135,32 @@ GRBmodel <- setRefClass(
       )
 
       if (auto_update) update()
-      return(error)
+      invisible(error)
     },
+
+    addqpterms = function(values, var1, var2) {
+      varnames <- get_names("VarName")
+      error <- .Call(
+        "GRB_addqpterms",
+        exptr,
+        length(values),
+        names_to_ind(var1, varnames),
+        names_to_ind(var2, varnames),
+        values
+      )
+
+      if (auto_update) update()
+      invisible(error)
+    },
+
+    delq = function() invisible(.Call("GRB_delq", exptr)),
 
     setpwlobj = function(var, x, y) {
       var <- names_to_ind(var, get_names("VarName"))
-      .Call("GRB_setpwlobj", exptr, var, length(x), x, y)
+      error <- .Call("GRB_setpwlobj", exptr, var, length(x), x, y)
+
+      if (auto_update) update()
+      invisible(error)
     },
 
     getattr = function(attrname, named=TRUE) {
@@ -134,9 +174,6 @@ GRBmodel <- setRefClass(
                            "GRB_getdblattr",
                            "GRB_getstrattr")
         value <- .Call(callname, exptr, attrname)
-        if (named) {
-          names(value) <- attrname
-        }
         return(value)
       } else { # variable or constraint attribute
         callname <- switch(info$datatype+1,
@@ -203,7 +240,7 @@ GRBmodel <- setRefClass(
       }
 
       if (auto_update) update()
-      return(error)
+      invisible(error)
     },
 
     # ======= convenience functions =======
@@ -251,6 +288,35 @@ GRBmodel <- setRefClass(
       } else {
         return(all_names)
       }
+    },
+
+    set_model_sense = function(sense=NULL, minimize=FALSE, maximize=FALSE) {
+      stopifnot(!is.null(sense) || minimize || maximize)
+      if (!is.null(sense)) {
+        if (is.numeric(sense)) {
+          sense <- as.integer(sense)
+        } else if (is.character(sense)) {
+          sense <- if (grepl(tolower(sense), "minimize")) 1L else -1L
+        } else {
+          stop("sense must be numeric or character")
+        }
+      } else {
+        sense <- if (minimize) 1L else -1L
+      }
+      setattr("ModelSense", sense)
+    },
+
+    get_solution = function(named=TRUE) {
+      sol_fields <- c("ObjVal", "X", "Runtime", "Status")
+      sol <- lapply(sol_fields, function(x) getattr(x, named=named)) %>%
+        setNames(sol_fields)
+      return(sol)
+    },
+
+    show_output = function(tf=TRUE) {
+      error <- .Call("GRB_setintparam", exptr, "OutputFlag", as.integer(tf))
+      if (auto_update) update()
+      invisible(error)
     },
 
     show = function(tempfile="MODEL_SHOW_TEMP.lp") {

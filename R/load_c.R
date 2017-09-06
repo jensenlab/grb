@@ -1,16 +1,21 @@
 
 #' @useDynLib grb GRB_loadenv
 #' @useDynLib grb GRB_freeenv
+#' @useDynLib grb GRB_loadmodel
 #' @useDynLib grb GRB_newmodel
 #' @useDynLib grb GRB_copymodel
 #' @useDynLib grb GRB_addconstr
+#' @useDynLib grb GRB_addconstrs
 #' @useDynLib grb GRB_addgenconstrMax
 #' @useDynLib grb GRB_addgenconstrMin
 #' @useDynLib grb GRB_addgenconstrAbs
 #' @useDynLib grb GRB_addgenconstrAnd
 #' @useDynLib grb GRB_addgenconstrOr
 #' @useDynLib grb GRB_addgenconstrIndicator
+#' @useDynLib grb GRB_addqconstr
+#' @useDynLib grb GRB_addqpterms
 #' @useDynLib grb GRB_addrangeconstr
+#' @useDynLib grb GRB_addrangeconstrs
 #' @useDynLib grb GRB_addsos
 #' @useDynLib grb GRB_addvar
 #' @useDynLib grb GRB_addvars
@@ -27,6 +32,7 @@
 #' @useDynLib grb GRB_optimize
 #' @useDynLib grb GRB_optimizeasync
 #' @useDynLib grb GRB_computeIIS
+#' @useDynLib grb GRB_feasrelax
 #' @useDynLib grb GRB_fixedmodel
 #' @useDynLib grb GRB_resetmodel
 #' @useDynLib grb GRB_sync
@@ -49,5 +55,7 @@
 #'
 #' @useDynLib grb GRB_getstrattr
 #' @useDynLib grb GRB_getstrattrarray
+#'
+#' @useDynLib grb GRB_setintparam
 #'
 NULL
