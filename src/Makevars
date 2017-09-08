@@ -1,2 +1,2 @@
-PKG_CFLAGS += -I"/Library/gurobi702/mac64/include" -lm
-PKG_LIBS += -L"/Library/gurobi702/mac64/lib" -lgurobi70
+PKG_CFLAGS += -I"/Library/gurobi702/mac64/include:/home/gurobi702/linux65/include" -lm
+PKG_LIBS += -L"/Library/gurobi702/mac64/lib:/home/gurobi702/linux65/lib" -lgurobi70
