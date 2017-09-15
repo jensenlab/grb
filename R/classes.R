@@ -76,6 +76,12 @@ GRBmodel <- setRefClass(
       auto_update <<- auto_update
     },
 
+    copy = function() {
+      newmodel <- callSuper()
+      newmodel$exptr <- .Call("GRB_copymodel", exptr)
+      newmodel
+    },
+
     update = function() invisible(.Call("GRB_updatemodel", exptr)),
     optimize = function() invisible(.Call("GRB_optimize", exptr)),
 
